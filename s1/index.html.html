@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Somoti: A Community Savings Agreement</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --dark-bg: #010419;
+            --dark-card: #1c1c1e;
+            --dark-text: rgba(255, 255, 255, 0.9);
+            --dark-subtitle: #86868b;
+            --dark-border: #2c2c2e;
+            --accent-blue: #0A84FF;
+            --accent-purple: #BF5AF2;
+            --accent-green: #30D158;
+            --accent-orange: #FF9F0A;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--dark-text);
+            overflow-x: hidden;
+        }
+        
+        #generative-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+            background: linear-gradient(to bottom, rgba(1, 4, 25, 0.5) 0%, rgba(1, 4, 25, 0.8) 40%, #010419 100%);
+        }
+
+        /* --- Animated Gradient Text --- */
+        .animated-gradient-text {
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple), var(--accent-green), var(--accent-orange), var(--accent-blue));
+            background-size: 300% auto;
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            animation: gradient-flow 8s linear infinite;
+        }
+
+        @keyframes gradient-flow {
+            0% { background-position: 200% center; }
+            100% { background-position: -100% center; }
+        }
+
+        /* --- 3D Tilt Card Effect --- */
+        .card {
+            background-color: var(--dark-card);
+            border-radius: 20px;
+            padding: 2.5rem;
+            border: 1px solid var(--dark-border);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+        .card:hover {
+            transform: perspective(1000px) rotateY(5deg) rotateX(10deg) scale3d(1.05, 1.05, 1.05);
+            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-primary {
+            background-color: var(--accent-blue);
+            color: white;
+            font-weight: 600;
+            padding: 1rem 2rem;
+            border-radius: 9999px;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 10px 20px -10px rgba(10, 132, 255, 0.5);
+        }
+
+        .section-title {
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: -0.05em;
+            text-align: center;
+            margin-bottom: 1rem;
+            color: white;
+        }
+        .section-subtitle {
+            font-size: 1.25rem;
+            text-align: center;
+            color: var(--dark-subtitle);
+            max-width: 600px;
+            margin: 0 auto 4rem auto;
+        }
+        .icon-circle {
+            background-color: #2c2c2e;
+            border-radius: 50%;
+            padding: 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+        .card:hover .icon-circle {
+            transform: scale(1.1);
+        }
+        .accordion-item {
+            background-color: var(--dark-card);
+            border-radius: 12px;
+            border: 1px solid var(--dark-border);
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(50px) scale(0.9);
+            transition: opacity 0.8s ease-out, transform 1s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        input[type="number"], input[type="range"] {
+            background-color: #333;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 0.5rem;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 20px; height: 20px;
+            background: var(--accent-purple);
+            cursor: pointer; border-radius: 50%;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px; height: 20px;
+            background: var(--accent-purple);
+            cursor: pointer; border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <canvas id="generative-background"></canvas>
+    <div class="content-wrapper">
+        <!-- Header -->
+        <header class="sticky top-0 bg-black/50 backdrop-blur-xl z-50 border-b border-white/10">
+            <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+                <div class="text-2xl font-bold text-white">
+                    <span class="text-blue-500">S</span>omoti
+                </div>
+                <div class="hidden md:flex space-x-8 items-center">
+                    <a href="#about" class="text-gray-300 hover:text-white transition-colors">About</a>
+                    <a href="#calculator" class="text-gray-300 hover:text-white transition-colors">Calculator</a>
+                    <a href="#visualization" class="text-gray-300 hover:text-white transition-colors">Graphs</a>
+                    <a href="#terms" class="text-gray-300 hover:text-white transition-colors">Terms</a>
+                    <a href="#contact" class="btn-primary text-sm px-6 py-2">Contact Organizer</a>
+                </div>
+                <button id="mobile-menu-button" class="md:hidden p-2 rounded-md text-white">
+                    <i data-lucide="menu"></i>
+                </button>
+            </nav>
+            <div id="mobile-menu" class="hidden md:hidden px-6 pb-4 bg-black/80">
+                <a href="#about" class="block py-2 text-gray-300 hover:text-blue-500">About</a>
+                <a href="#calculator" class="block py-2 text-gray-300 hover:text-blue-500">Calculator</a>
+                <a href="#visualization" class="block py-2 text-gray-300 hover:text-blue-500">Graphs</a>
+                <a href="#terms" class="block py-2 text-gray-300 hover:text-blue-500">Terms</a>
+                <a href="#contact" class="block mt-2 text-center btn-primary text-sm px-6 py-2">Contact Organizer</a>
+            </div>
+        </header>
+
+        <!-- Hero Section -->
+        <section class="relative py-20 md:py-32 overflow-hidden">
+            <div class="container mx-auto px-6 text-center relative z-10">
+                <h1 class="text-4xl md:text-7xl font-extrabold text-white mb-6 leading-tight animated-gradient-text">Disciplined Savings, Together.</h1>
+                <p class="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto">
+                    Welcome to our private savings group (Somoti). A community effort built on trust, helping members achieve financial goals through collective, disciplined savings.
+                </p>
+            </div>
+        </section>
+
+        <!-- All other sections remain the same -->
+        <section id="about" class="py-20 overflow-hidden">
+            <div class="container mx-auto px-6">
+                <div class="reveal">
+                    <h2 class="section-title">What is this Somoti?</h2>
+                    <p class="section-subtitle">
+                        A private, non-commercial agreement. Not a bank or chit fund. Our goal is simple: help each other save in a structured and transparent way.
+                    </p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8 text-center">
+                    <div class="card reveal">
+                        <div class="icon-circle"> <i data-lucide="users-2" style="color: var(--accent-blue);"></i> </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Community Driven</h3>
+                        <p>Funds are used based on mutual consent for the group's collective benefit.</p>
+                    </div>
+                    <div class="card reveal" style="transition-delay: 150ms;">
+                        <div class="icon-circle"> <i data-lucide="lock" style="color: var(--accent-purple);"></i> </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Private & Secure</h3>
+                        <p>This is a private agreement, not open to the public, ensuring a close-knit group.</p>
+                    </div>
+                    <div class="card reveal" style="transition-delay: 300ms;">
+                        <div class="icon-circle"> <i data-lucide="shield-check" style="color: var(--accent-green);"></i> </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Absolute Transparency</h3>
+                        <p>Our Two-Book system ensures every transaction is verified and recorded.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="calculator" class="py-20 overflow-hidden">
+            <div class="container mx-auto px-6">
+                <div class="reveal">
+                    <h2 class="section-title">Interactive Calculator</h2>
+                    <p class="section-subtitle">
+                        Estimate your financial standing. See how your contributions grow and how penalties might affect your bonus.
+                    </p>
+                </div>
+                <div class="grid lg:grid-cols-2 gap-8 items-start">
+                    <div class="card p-8 reveal">
+                        <h3 class="text-2xl font-bold text-white mb-6">Enter Your Details</h3>
+                        <div class="space-y-6">
+                            <div>
+                                <label for="monthlyContribution" class="block text-sm font-medium mb-2">Your Monthly Contribution (INR)</label>
+                                <input type="number" id="monthlyContribution" value="1000" min="100" step="100" class="w-full p-3 text-center text-xl font-bold">
+                            </div>
+                            <div>
+                                <label for="monthsContributed" class="block text-sm font-medium mb-2">Months Contributed</label>
+                                <input type="range" id="monthsContributed" min="0" max="12" value="6" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                <div class="text-center font-bold text-xl mt-2 text-white"><span id="monthsDisplay">6</span> months</div>
+                            </div>
+                            <div>
+                                <label for="lateWeeks" class="block text-sm font-medium mb-2">Total weeks of late payment</label>
+                                <input type="number" id="lateWeeks" value="0" min="0" class="w-full p-3 text-center text-xl font-bold">
+                                <p class="text-xs text-center mt-1">Penalty: ₹25 per week.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card bg-gray-900/50 p-8 reveal" style="transition-delay: 150ms;">
+                        <h3 class="text-2xl font-bold text-white mb-6 text-center">Your Estimated Payout</h3>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center bg-gray-800 p-4 rounded-lg">
+                                <span class="text-gray-400">Total Principal</span>
+                                <span id="principalOutput" class="text-2xl font-bold text-white">₹6,000</span>
+                            </div>
+                            <div class="flex justify-between items-center bg-gray-800 p-4 rounded-lg">
+                                <span class="text-gray-400">Late Payment Penalty</span>
+                                <span id="penaltyOutput" class="text-2xl font-bold text-red-500">- ₹0</span>
+                            </div>
+                            <div class="flex justify-between items-center bg-gray-800 p-4 rounded-lg">
+                                <span class="text-gray-400">Projected Bonus</span>
+                                <span id="bonusOutput" class="text-2xl font-bold" style="color: var(--accent-green);">+ ₹1,100</span>
+                            </div>
+                            <hr class="border-gray-700 my-4">
+                            <div class="flex justify-between items-center p-4">
+                                <span class="text-lg">Estimated Final Payout</span>
+                                <span id="finalPayoutOutput" class="text-3xl font-extrabold animated-gradient-text">₹7,100</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-center text-gray-500 mt-6">Note: Bonus is an estimate. Final payout: on or before July 7, 2026.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="visualization" class="py-20 overflow-hidden">
+            <div class="container mx-auto px-6">
+                <div class="reveal">
+                    <h2 class="section-title">Financial Visualization</h2>
+                    <p class="section-subtitle">
+                        Watch your savings grow. This chart visualizes your financial journey over the 12-month term based on your inputs above.
+                    </p>
+                </div>
+                <div class="card p-8 reveal">
+                    <canvas id="savingsChart" height="400"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="terms" class="py-20 overflow-hidden">
+            <div class="container mx-auto px-6 max-w-4xl">
+                <div class="reveal">
+                    <h2 class="section-title">Key Terms & Conditions</h2>
+                    <p class="section-subtitle">
+                        The most important rules governing our Somoti.
+                    </p>
+                </div>
+                <div class="space-y-4">
+                    <div class="accordion-item reveal">
+                        <button class="accordion-header w-full text-left p-5 font-semibold flex justify-between items-center text-white"> Early Withdrawal <i data-lucide="chevron-down" class="accordion-icon transition-transform"></i></button>
+                        <div class="accordion-content px-5 pb-5"><p>Withdraw early and receive your principal plus a pro-rata bonus share within 30 days.</p></div>
+                    </div>
+                    <div class="accordion-item reveal" style="transition-delay: 150ms;">
+                        <button class="accordion-header w-full text-left p-5 font-semibold flex justify-between items-center text-white">Dispute Resolution <i data-lucide="chevron-down" class="accordion-icon transition-transform"></i></button>
+                        <div class="accordion-content px-5 pb-5"><p>Disputes are handled internally by a neutral mediation committee whose decision is final.</p></div>
+                    </div>
+                    <div class="accordion-item reveal" style="transition-delay: 300ms;">
+                        <button class="accordion-header w-full text-left p-5 font-semibold flex justify-between items-center text-white">Fraud & False Allegations <i data-lucide="chevron-down" class="accordion-icon transition-transform"></i></button>
+                        <div class="accordion-content px-5 pb-5"><p>Fraudulent entries lead to termination and a 10% penalty. False legal claims may incur costs.</p></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="contact" class="py-20 overflow-hidden">
+            <div class="container mx-auto px-6 text-center">
+                <div class="reveal">
+                    <h2 class="section-title">Get in Touch</h2>
+                    <p class="section-subtitle">
+                        Have questions? Contact the Group Organizer.
+                    </p>
+                </div>
+                <div class="card max-w-md mx-auto reveal">
+                    <h3 class="text-2xl font-bold text-white">Mina Roy</h3>
+                    <p class="mt-2">Fokbai Bari, Radha Gobinda Bazar, Siliguri 734006</p>
+                    <p class="mt-1">Phone: <a href="tel:8918703169" class="font-semibold" style="color: var(--accent-blue);" onmouseover="this.style.color=getComputedStyle(this).getPropertyValue('--accent-purple')" onmouseout="this.style.color=getComputedStyle(this).getPropertyValue('--accent-blue')">8918703169</a></p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="bg-black/50 border-t border-white/10 py-8">
+            <div class="container mx-auto px-6 text-center text-gray-500">
+                <p>&copy; 2025 Somoti Savings Group. All rights reserved.</p>
+                <p class="text-xs mt-2">This website is for informational purposes only.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // --- Custom Animated Background ---
+        const bgCanvas = document.getElementById('generative-background');
+        const bgCtx = bgCanvas.getContext('2d');
+        let width, height, graph;
+
+        function initBackground() {
+            width = bgCanvas.width = window.innerWidth;
+            height = bgCanvas.height = window.innerHeight;
+            graph = {
+                points: [],
+                arrows: [],
+                gridSize: 50,
+                scrollOffset: 0
+            };
+            
+            // Create main graph points
+            for (let i = 0; i < width / 100 + 1; i++) { // Ensure at least one point
+                graph.points.push({
+                    x: i * 120,
+                    y: height * 0.7 - Math.random() * height * 0.2,
+                    originalY: height * 0.7 - Math.random() * height * 0.2
+                });
+            }
+
+            // Create rising arrows
+            const arrowColors = ['rgba(48, 209, 88, 0.8)', 'rgba(191, 90, 242, 0.8)', 'rgba(255, 159, 10, 0.8)'];
+            for(let i = 0; i < 25; i++) {
+                graph.arrows.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height + height,
+                    size: Math.random() * 12 + 6,
+                    speed: Math.random() * 0.6 + 0.3,
+                    color: arrowColors[i % arrowColors.length]
+                });
+            }
+        }
+        initBackground();
+
+        function drawBackground() {
+            bgCtx.clearRect(0, 0, width, height);
+
+            // Draw grid
+            bgCtx.strokeStyle = 'rgba(10, 132, 255, 0.15)'; // Brighter grid
+            bgCtx.lineWidth = 1;
+            for (let i = 0; i < width; i += graph.gridSize) {
+                bgCtx.beginPath();
+                bgCtx.moveTo(i, 0);
+                bgCtx.lineTo(i, height);
+                bgCtx.stroke();
+            }
+            for (let i = 0; i < height; i += graph.gridSize) {
+                bgCtx.beginPath();
+                bgCtx.moveTo(0, i);
+                bgCtx.lineTo(width, i);
+                bgCtx.stroke();
+            }
+            
+            // Draw main graph line
+            if (graph.points && graph.points.length > 0) {
+                bgCtx.beginPath();
+                // FIX: Use the originalY and subtract the scroll offset
+                bgCtx.moveTo(graph.points[0].x, graph.points[0].originalY - graph.scrollOffset);
+                for (let i = 1; i < graph.points.length; i++) {
+                    bgCtx.lineTo(graph.points[i].x, graph.points[i].originalY - graph.scrollOffset);
+                }
+                bgCtx.strokeStyle = 'rgba(10, 132, 255, 0.8)'; // Brighter line
+                bgCtx.lineWidth = 2.5; // Thicker line
+                bgCtx.stroke();
+            }
+            
+            // Draw rising arrows
+            graph.arrows.forEach(arrow => {
+                arrow.y -= arrow.speed;
+                bgCtx.fillStyle = arrow.color;
+                bgCtx.beginPath();
+                bgCtx.moveTo(arrow.x, arrow.y);
+                bgCtx.lineTo(arrow.x - arrow.size / 2, arrow.y + arrow.size);
+                bgCtx.lineTo(arrow.x + arrow.size / 2, arrow.y + arrow.size);
+                bgCtx.closePath();
+                bgCtx.fill();
+                if(arrow.y < -arrow.size) {
+                    arrow.y = height + arrow.size;
+                    arrow.x = Math.random() * width;
+                }
+            });
+        }
+
+        function animateBackground() {
+            drawBackground();
+            requestAnimationFrame(animateBackground);
+        }
+        animateBackground();
+
+
+        // --- Parallax on Scroll ---
+        window.addEventListener('scroll', () => {
+            const scrollValue = window.scrollY;
+            // This multiplier controls the speed of the parallax effect
+            graph.scrollOffset = scrollValue * 0.4;
+        });
+
+        window.addEventListener('resize', initBackground);
+
+
+        // --- Mobile Menu ---
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => { mobileMenu.classList.toggle('hidden'); });
+
+        // --- Calculator & Chart Logic ---
+        const monthlyContributionInput = document.getElementById('monthlyContribution');
+        const monthsContributedSlider = document.getElementById('monthsContributed');
+        const monthsDisplay = document.getElementById('monthsDisplay');
+        const lateWeeksInput = document.getElementById('lateWeeks');
+        const principalOutput = document.getElementById('principalOutput');
+        const penaltyOutput = document.getElementById('penaltyOutput');
+        const bonusOutput = document.getElementById('bonusOutput');
+        const finalPayoutOutput = document.getElementById('finalPayoutOutput');
+
+        const TOTAL_PROJECTED_BONUS_STANDARD = 2200;
+        const STANDARD_CONTRIBUTION = 1000;
+        const TERM_MONTHS = 12;
+        const PENALTY_PER_WEEK = 25;
+        const ACCENT_BLUE = '#0A84FF';
+        const ACCENT_GREEN = '#30D158';
+        let savingsChart = null;
+
+        function updateAll() {
+            const monthlyContribution = parseInt(monthlyContributionInput.value) || 0;
+            const months = parseInt(monthsContributedSlider.value);
+            const lateWeeks = parseInt(lateWeeksInput.value) || 0;
+            const principal = months * monthlyContribution;
+            const penalty = lateWeeks * PENALTY_PER_WEEK;
+            const bonusRatio = monthlyContribution / STANDARD_CONTRIBUTION;
+            const totalProjectedBonus = TOTAL_PROJECTED_BONUS_STANDARD * bonusRatio;
+            const proRataBonus = (totalProjectedBonus / TERM_MONTHS) * months;
+            const finalPayout = principal + proRataBonus - penalty;
+
+            monthsDisplay.textContent = months;
+            principalOutput.textContent = `₹${principal.toLocaleString('en-IN')}`;
+            penaltyOutput.textContent = `- ₹${penalty.toLocaleString('en-IN')}`;
+            bonusOutput.textContent = `+ ₹${Math.round(proRataBonus).toLocaleString('en-IN')}`;
+            finalPayoutOutput.textContent = `₹${Math.round(finalPayout).toLocaleString('en-IN')}`;
+            
+            const chartLabels = Array.from({ length: 12 }, (_, i) => `M${i + 1}`);
+            const principalData = Array.from({ length: 12 }, (_, i) => (i + 1) * monthlyContribution);
+            const totalData = Array.from({ length: 12 }, (_, i) => {
+                const currentBonus = (totalProjectedBonus / TERM_MONTHS) * (i + 1);
+                return ((i + 1) * monthlyContribution) + currentBonus;
+            });
+            updateChartData(chartLabels, principalData, totalData);
+        }
+
+        function updateChartData(labels, principal, total) {
+            if (savingsChart) {
+                savingsChart.data.labels = labels;
+                savingsChart.data.datasets[0].data = principal;
+                savingsChart.data.datasets[1].data = total;
+                savingsChart.update('none');
+            }
+        }
+
+        function createChart(labels, principal, total) {
+            const ctx = document.getElementById('savingsChart').getContext('2d');
+            savingsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Total Principal', data: principal, borderColor: ACCENT_BLUE, backgroundColor: 'rgba(10, 132, 255, 0.2)', fill: true, tension: 0.4, pointBackgroundColor: ACCENT_BLUE, pointRadius: 5, pointHoverRadius: 8 },
+                        { label: 'Total Value (Principal + Bonus)', data: total, borderColor: ACCENT_GREEN, backgroundColor: 'rgba(48, 209, 88, 0.2)', fill: true, tension: 0.4, pointBackgroundColor: ACCENT_GREEN, pointRadius: 5, pointHoverRadius: 8 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    animation: { duration: 2000, easing: 'easeInOutQuart' },
+                    plugins: { legend: { labels: { color: 'white', font: { size: 14 } } }, tooltip: { mode: 'index', intersect: false, bodyFont: { size: 14 }, titleFont: { size: 16 } } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: 'white', callback: (value) => '₹' + value.toLocaleString('en-IN') }, grid: { color: 'rgba(255, 255, 255, 0.1)' } },
+                        x: { ticks: { color: 'white' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }
+                    }
+                }
+            });
+        }
+        
+        [monthlyContributionInput, monthsContributedSlider, lateWeeksInput].forEach(input => {
+            input.addEventListener('input', updateAll);
+        });
+
+        document.querySelectorAll('.accordion-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const accordionContent = header.nextElementSibling;
+                const accordionIcon = header.querySelector('.accordion-icon');
+                if (accordionContent.style.maxHeight) {
+                    accordionContent.style.maxHeight = null;
+                    accordionIcon.style.transform = 'rotate(0deg)';
+                } else {
+                    accordionContent.style.maxHeight = accordionContent.scrollHeight + "px";
+                    accordionIcon.style.transform = 'rotate(180deg)';
+                }
+            });
+        });
+        
+        const revealObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    if (entry.target.id === 'visualization' && !savingsChart) {
+                        setTimeout(() => {
+                           updateAll();
+                           const { monthlyContribution } = getCalculatorValues();
+                           const totalProjectedBonus = TOTAL_PROJECTED_BONUS_STANDARD * (monthlyContribution / STANDARD_CONTRIBUTION);
+                           const chartLabels = Array.from({ length: 12 }, (_, i) => `M${i + 1}`);
+                           const principalData = Array.from({ length: 12 }, (_, i) => (i + 1) * monthlyContribution);
+                           const totalData = Array.from({ length: 12 }, (_, i) => ((i + 1) * monthlyContribution) + ((totalProjectedBonus / TERM_MONTHS) * (i + 1)));
+                           createChart(chartLabels, principalData, totalData);
+                        }, 200);
+                        observer.unobserve(entry.target);
+                    } else if (entry.target.id !== 'visualization') {
+                        observer.unobserve(entry.target);
+                    }
+                }
+            });
+        }, { threshold: 0.2 });
+
+        function getCalculatorValues() {
+            return { monthlyContribution: parseInt(monthlyContributionInput.value) || 0 };
+        }
+        
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+        const vizSection = document.getElementById('visualization');
+        if (vizSection) revealObserver.observe(vizSection);
+
+        window.onload = updateAll;
+    </script>
+</body>
+</html>
